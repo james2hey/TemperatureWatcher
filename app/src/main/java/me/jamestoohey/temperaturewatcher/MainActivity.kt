@@ -1,10 +1,17 @@
 package me.jamestoohey.temperaturewatcher
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.Intent
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
+import androidx.annotation.RequiresApi
 
 class MainActivity : AppCompatActivity() {
 
@@ -40,7 +47,26 @@ class MainActivity : AppCompatActivity() {
                 Log.d("asdf", it.temp.toString())
             }
 
+
         }
+
+        createNotificationChannel()
+
+        val serviceIntent = Intent(this, TempService::class.java)
+        serviceIntent.putExtra("highTempThreshold", highTempThreshold)
+        serviceIntent.putExtra("lowTempThreshold", lowTempThreshold)
+        startForegroundService(serviceIntent)
+    }
+
+    private fun createNotificationChannel() {
+        val name = "Temperature Checker Notifications"
+        val descriptionText = "Receive notifications that the current temperature has gone above/below your given threshold."
+        val importance = NotificationManager.IMPORTANCE_DEFAULT
+        val channel = NotificationChannel(Notification.CATEGORY_ALARM, name, importance).apply {
+            description = descriptionText
+        }
+        val notificationManager: NotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
     }
 
 
