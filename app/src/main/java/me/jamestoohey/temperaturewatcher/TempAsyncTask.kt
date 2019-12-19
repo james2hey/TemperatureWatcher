@@ -1,7 +1,6 @@
 package me.jamestoohey.temperaturewatcher
 
 import android.os.AsyncTask
-import android.util.Log
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.net.URL
@@ -19,9 +18,8 @@ class TempAsyncTask: AsyncTask<URL, Void, TempReading?>() {
             val jsonString = BufferedInputStream(connection.inputStream).readBytes().toString(Charset.defaultCharset())
             val json = JSONObject(jsonString)
             val temp = json.getJSONObject("main").getInt("temp")
-            val feelsLike = json.getJSONObject("main").getInt("feels_like")
             val location = json.getString("name")
-            return TempReading(kelvinToCelsius(temp), kelvinToCelsius(feelsLike), location)
+            return TempReading(kelvinToCelsius(temp), location)
 
         } finally {
             connection.disconnect()

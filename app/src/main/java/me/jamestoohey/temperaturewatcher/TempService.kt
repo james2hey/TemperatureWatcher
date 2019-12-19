@@ -7,16 +7,20 @@ import android.content.Intent
 import android.os.Handler
 import android.os.IBinder
 import android.util.Log
-import androidx.core.app.NotificationManagerCompat
-import java.util.*
 
 
 class TempService: Service() {
     private lateinit var handler: Handler
     private val defaultInterval: Long = 10 * 1000 // todo make it every 60 seconds
     private var prevTemps: ArrayList<Int> = arrayListOf()
+    private val numOfPreviousReadings = 30
     private var highTempThreshold: Int? = null
     private var lowTempThreshold: Int? = null
+    private var measurementType: TemperatureMeasurement = TemperatureMeasurement.CELSIUS
+
+    fun setMeasurementType(type: TemperatureMeasurement) {
+        measurementType = type
+    }
 
     private val runnableService: Runnable = object : Runnable {
         override fun run() {
@@ -27,18 +31,17 @@ class TempService: Service() {
                 val currentTemp = it.temp
 
                 if (currentTemp < lowTempThreshold!! && prevTemps.all { t -> t >= lowTempThreshold!! }) {
-                    notify("Temperature has gone below your low threshold.")
+                    notify("Low Temperature","The temperature has gone below $lowTempThreshold degrees.")
 
                 } else if (currentTemp > highTempThreshold!! && prevTemps.all { t -> t <= highTempThreshold!!}) {
-                    notify("Temperature has gone above your high threshold.")
+                    notify("High Temperature","The temperature has gone above $highTempThreshold degrees.")
 
                 }
                 Log.d("asdf", currentTemp.toString())
 
                 prevTemps.add(currentTemp)
-                if (prevTemps.size > 10) prevTemps.remove(0)
+                if (prevTemps.size > numOfPreviousReadings) prevTemps.remove(0)
             }
-
 
             handler.postDelayed(this, defaultInterval)
         }
@@ -48,9 +51,8 @@ class TempService: Service() {
         intent?.extras?.let {
             highTempThreshold = it.getInt("highTempThreshold")
             lowTempThreshold = it.getInt("lowTempThreshold")
-        }
 
-        becomeForegroundService()
+        }
         handler = Handler()
         handler.post(runnableService)
         return super.onStartCommand(intent, flags, startId)
@@ -60,40 +62,25 @@ class TempService: Service() {
         return null
     }
 
+
     override fun onDestroy() {
         handler.removeCallbacks(runnableService)
         stopSelf()
         super.onDestroy()
     }
 
-    private fun becomeForegroundService() {
+    private fun notify(title: String, message: String) {
         val intent = Intent(this, MainActivity::class.java).let {
             PendingIntent.getActivity(this, 0, it, 0)
         }
-
-        val notification = Notification.Builder(this, Notification.CATEGORY_ALARM).run {
-            setSmallIcon(R.drawable.ic_launcher_background)
-            setContentTitle("Temperature Watcher")
-            setContentText("Notifications for temperature.")
+        val notification = Notification.Builder(this, Notification.CATEGORY_EVENT).run {
+            setSmallIcon(R.drawable.ic_launcher_foreground)
+            setContentTitle(title)
+            setContentText(message)
             setContentIntent(intent)
             setAutoCancel(true)
             build()
         }
-
         startForeground(1, notification)
     }
-
-    private fun notify(message: String) {
-        val notification = Notification.Builder(this, Notification.CATEGORY_ALARM).run {
-            setSmallIcon(R.drawable.ic_launcher_background)
-            setContentTitle("Temperature Watcher")
-            setContentText(message)
-            setAutoCancel(true)
-        }
-
-        with(NotificationManagerCompat.from(this)) {
-            notify(1, notification.build())
-        }
-    }
-
 }

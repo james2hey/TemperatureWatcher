@@ -1,3 +1,3 @@
 package me.jamestoohey.temperaturewatcher
 
-data class TempReading(val temp: Int, val feelsLike: Int, val location: String)
+data class TempReading(val temp: Int, val location: String)
