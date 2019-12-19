@@ -5,13 +5,11 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
-import androidx.annotation.RequiresApi
 
 class MainActivity : AppCompatActivity() {
 
@@ -20,8 +18,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cityText: EditText
     private lateinit var saveButton: Button
 
-    private var highTempThreshold = 0
-    private var lowTempThreshold = 0
+    private var highTempThreshold = 18
+    private var lowTempThreshold = 18
     private var city = "Auckland"
 
     // If the given temperature changes above/below a threshold, send a notification.
@@ -41,7 +39,7 @@ class MainActivity : AppCompatActivity() {
 //            lowTempThreshold = lowTempThresholdText.text.toString().toInt()
 //            city = lowTempThresholdText.text.toString()
 
-            val tempChecker = TempChecker()
+            val tempChecker = TempAsyncTask()
             val tempReading = tempChecker.execute().get()
             tempReading?.let {
                 Log.d("asdf", it.temp.toString())
@@ -61,7 +59,7 @@ class MainActivity : AppCompatActivity() {
     private fun createNotificationChannel() {
         val name = "Temperature Checker Notifications"
         val descriptionText = "Receive notifications that the current temperature has gone above/below your given threshold."
-        val importance = NotificationManager.IMPORTANCE_DEFAULT
+        val importance = NotificationManager.IMPORTANCE_HIGH
         val channel = NotificationChannel(Notification.CATEGORY_ALARM, name, importance).apply {
             description = descriptionText
         }

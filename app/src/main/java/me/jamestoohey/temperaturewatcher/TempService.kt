@@ -8,29 +8,35 @@ import android.os.Handler
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
+import java.util.*
 
 
 class TempService: Service() {
     private lateinit var handler: Handler
     private val defaultInterval: Long = 10 * 1000 // todo make it every 60 seconds
-    private var prevTemp: Int? = null
+    private var prevTemps: ArrayList<Int> = arrayListOf()
     private var highTempThreshold: Int? = null
     private var lowTempThreshold: Int? = null
 
     private val runnableService: Runnable = object : Runnable {
         override fun run() {
 
-            val tempChecker = TempChecker()
+            val tempChecker = TempAsyncTask()
             val tempReading = tempChecker.execute().get()
             tempReading?.let {
-                if (it.temp < lowTempThreshold!!) {
+                val currentTemp = it.temp
+
+                if (currentTemp < lowTempThreshold!! && prevTemps.all { t -> t >= lowTempThreshold!! }) {
                     notify("Temperature has gone below your low threshold.")
 
-                } else if (it.temp > highTempThreshold!!) {
+                } else if (currentTemp > highTempThreshold!! && prevTemps.all { t -> t <= highTempThreshold!!}) {
                     notify("Temperature has gone above your high threshold.")
 
                 }
-                Log.d("asdf", it.temp.toString())
+                Log.d("asdf", currentTemp.toString())
+
+                prevTemps.add(currentTemp)
+                if (prevTemps.size > 10) prevTemps.remove(0)
             }
 
 
