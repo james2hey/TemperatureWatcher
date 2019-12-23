@@ -1,5 +1,5 @@
 package me.jamestoohey.temperaturewatcher
 
 enum class TemperatureMeasurement {
-    CELSIUS, FAHRENHEIT, KELVIN,
+    Celsius, Fahrenheit, Kelvin,
 }

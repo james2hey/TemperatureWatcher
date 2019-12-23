@@ -14,53 +14,45 @@ class TempService: Service() {
     private val defaultInterval: Long = 10 * 1000 // todo make it every 60 seconds
     private var prevTemps: ArrayList<Int> = arrayListOf()
     private val numOfPreviousReadings = 30
-    private var highTempThreshold: Int? = null
-    private var lowTempThreshold: Int? = null
-    private var measurementType: TemperatureMeasurement = TemperatureMeasurement.CELSIUS
-
-    fun setMeasurementType(type: TemperatureMeasurement) {
-        measurementType = type
-    }
+    private var mainInput: MainInput? = null
 
     private val runnableService: Runnable = object : Runnable {
         override fun run() {
 
             val tempChecker = TempAsyncTask()
             val tempReading = tempChecker.execute().get()
-            tempReading?.let {
-                val currentTemp = it.temp
+            tempReading?.let {tr ->
+                val currentTemp = tr.temp
+                mainInput?.let {
+                    if (currentTemp < it.low && prevTemps.all { t -> t >= it.low }) {
+                        notify("Low Temperature","The temperature has gone below ${it.low} degrees.")
+                    } else if (currentTemp > it.high && prevTemps.all { t -> t <= it.high}) {
+                        notify("High Temperature","The temperature has gone above ${it.high} degrees.")
+                    }
+                    Log.d("asdf", currentTemp.toString())
 
-                if (currentTemp < lowTempThreshold!! && prevTemps.all { t -> t >= lowTempThreshold!! }) {
-                    notify("Low Temperature","The temperature has gone below $lowTempThreshold degrees.")
-
-                } else if (currentTemp > highTempThreshold!! && prevTemps.all { t -> t <= highTempThreshold!!}) {
-                    notify("High Temperature","The temperature has gone above $highTempThreshold degrees.")
-
+                    prevTemps.add(currentTemp)
+                    if (prevTemps.size > numOfPreviousReadings) prevTemps.remove(0)
                 }
-                Log.d("asdf", currentTemp.toString())
-
-                prevTemps.add(currentTemp)
-                if (prevTemps.size > numOfPreviousReadings) prevTemps.remove(0)
             }
-
             handler.postDelayed(this, defaultInterval)
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.extras?.let {
-            highTempThreshold = it.getInt("highTempThreshold")
-            lowTempThreshold = it.getInt("lowTempThreshold")
-
+            val highTempThreshold = it.getDouble("highTempThreshold")
+            val lowTempThreshold = it.getDouble("lowTempThreshold")
+            val city = it.getString("city")
+            val measurementType = it.get("measurementType") as TemperatureMeasurement
+            mainInput = MainInput(lowTempThreshold, highTempThreshold, measurementType, city!!)
         }
         handler = Handler()
         handler.post(runnableService)
         return super.onStartCommand(intent, flags, startId)
     }
 
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
+    override fun onBind(intent: Intent?): IBinder? = null
 
 
     override fun onDestroy() {
@@ -83,4 +75,5 @@ class TempService: Service() {
         }
         startForeground(1, notification)
     }
+
 }

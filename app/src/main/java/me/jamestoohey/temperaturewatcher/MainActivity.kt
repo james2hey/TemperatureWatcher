@@ -7,24 +7,24 @@ import android.content.Context
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.*
+import androidx.core.view.isVisible
+import java.lang.NumberFormatException
 
 class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
 
     private lateinit var highTempThresholdText: EditText
     private lateinit var lowTempThresholdText: EditText
     private lateinit var cityText: EditText
+    private lateinit var errorText: TextView
     private lateinit var saveButton: Button
     private lateinit var notificationsSwitch: Switch
     private lateinit var tempMeasurementSpinner: Spinner
 
-    private var highTempThreshold = 18
-    private var lowTempThreshold = 18
-    private var city = "Auckland"
+    private var mainInput: MainInput? = null
     private var serviceIntent: Intent? = null
-    private var measurementType = TemperatureMeasurement.CELSIUS
+    private var measurementType = TemperatureMeasurement.Celsius
 
 
     // If the given temperature changes above/below a threshold, send a notification.
@@ -36,39 +36,66 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         highTempThresholdText = findViewById(R.id.high_temp_threshold)
         lowTempThresholdText = findViewById(R.id.low_temp_threshold)
         cityText = findViewById(R.id.city)
+        errorText = findViewById(R.id.error_text)
         saveButton = findViewById(R.id.save_button)
         tempMeasurementSpinner = findViewById(R.id.spinner)
         notificationsSwitch = findViewById(R.id.notificationsSwitch)
 
+        serviceIntent = createServiceIntent()
 
         saveButton.setOnClickListener {
-//            highTempThreshold = highTempThresholdText.text.toString().toInt()
-//            lowTempThreshold = lowTempThresholdText.text.toString().toInt()
-//            city = lowTempThresholdText.text.toString()
-
-            val tempChecker = TempAsyncTask()
-            val tempReading = tempChecker.execute().get()
-            tempReading?.let {
-                Log.d("asdf", it.temp.toString())
+            try {
+                val low = lowTempThresholdText.text.toString().toDouble()
+                val high = highTempThresholdText.text.toString().toDouble()
+                val city = lowTempThresholdText.text.toString()
+                if (low > high) {
+                    showError("Low temp can't be larger than high temp.")
+                } else {
+                    mainInput = MainInput(low, high, measurementType, city)
+                    restartTempService()
+                    errorText.text = ""
+                }
+            } catch (error: NumberFormatException) {
+                showError("Invalid input. Fill in all fields.")
             }
+
         }
+        setupTemperatureSpinner()
 
         createNotificationChannel()
-
-        serviceIntent = Intent(this, TempService::class.java).apply {
-            putExtra("highTempThreshold", highTempThreshold)
-            putExtra("lowTempThreshold", lowTempThreshold)
+        notificationsSwitch.setOnCheckedChangeListener { _, isOn ->
+            if (isOn) startService(serviceIntent) else stopService(serviceIntent)
         }
+    }
 
-        val temperatureMeasurementItems = arrayOf(TemperatureMeasurement.CELSIUS, TemperatureMeasurement.FAHRENHEIT, TemperatureMeasurement.KELVIN)
+    private fun showError(message: String) {
+        errorText.text = message
+        errorText.isVisible = true
+    }
+
+    private fun restartTempService() {
+        stopService(serviceIntent)
+        serviceIntent = createServiceIntent()
+        if (notificationsSwitch.isChecked) startService(serviceIntent)
+
+    }
+
+    private fun createServiceIntent(): Intent {
+        return Intent(this, TempService::class.java).apply {
+            mainInput?.let {
+                putExtra("highTempThreshold", it.high)
+                putExtra("lowTempThreshold", it.low)
+                putExtra("measurementType", it.measurementType)
+                putExtra("city", it.city)
+            }
+        }
+    }
+
+    private fun setupTemperatureSpinner() {
+        val temperatureMeasurementItems = arrayOf(TemperatureMeasurement.Celsius, TemperatureMeasurement.Fahrenheit, TemperatureMeasurement.Kelvin)
+        temperatureMeasurementItems.forEach { t -> t.toString().toUpperCase() }
         val adapter = ArrayAdapter<TemperatureMeasurement>(this, R.layout.support_simple_spinner_dropdown_item, temperatureMeasurementItems)
         tempMeasurementSpinner.adapter = adapter
-//
-//        tempMeasurementSpinner.onItemSelectedListener
-
-        notificationsSwitch.setOnCheckedChangeListener { _, isOn ->
-            if (isOn) startForegroundService(serviceIntent) else stopService(serviceIntent)
-        }
     }
 
     private fun createNotificationChannel() {
