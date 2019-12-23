@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Handler
 import android.os.IBinder
 import android.util.Log
+import kotlin.math.roundToInt
 
 
 class TempService: Service() {
@@ -18,12 +19,12 @@ class TempService: Service() {
 
     private val runnableService: Runnable = object : Runnable {
         override fun run() {
-
-            val tempChecker = TempAsyncTask()
-            val tempReading = tempChecker.execute().get()
+            val tempAsyncTask = TempAsyncTask()
+            val tempReading = tempAsyncTask.execute().get()
             tempReading?.let {tr ->
-                val currentTemp = tr.temp
+                val currentTemp = getConvertedTemp(tr.temp)
                 mainInput?.let {
+                    Log.d("asdf", mainInput?.measurementType.toString())
                     if (currentTemp < it.low && prevTemps.all { t -> t >= it.low }) {
                         notify("Low Temperature","The temperature has gone below ${it.low} degrees.")
                     } else if (currentTemp > it.high && prevTemps.all { t -> t <= it.high}) {
@@ -45,7 +46,7 @@ class TempService: Service() {
             val lowTempThreshold = it.getDouble("lowTempThreshold")
             val city = it.getString("city")
             val measurementType = it.get("measurementType") as TemperatureMeasurement
-            mainInput = MainInput(lowTempThreshold, highTempThreshold, measurementType, city!!)
+            mainInput = MainInput(lowTempThreshold, highTempThreshold, measurementType, city!!, true)
         }
         handler = Handler()
         handler.post(runnableService)
@@ -53,7 +54,6 @@ class TempService: Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
-
 
     override fun onDestroy() {
         handler.removeCallbacks(runnableService)
@@ -75,5 +75,25 @@ class TempService: Service() {
         }
         startForeground(1, notification)
     }
+
+    private fun getConvertedTemp(temp: Int): Int {
+        mainInput?.let {
+            return when (it.measurementType) {
+                TemperatureMeasurement.Fahrenheit -> kelvinToFahrenheit(temp)
+                TemperatureMeasurement.Kelvin -> temp
+                else -> kelvinToCelsius(temp)
+            }
+        }
+        return temp
+    }
+
+    private fun kelvinToCelsius(temp: Int): Int = (temp - 273.15).roundToInt()
+
+    private fun kelvinToFahrenheit(temp: Int): Int {
+        val celsiusTemp = kelvinToCelsius(temp)
+        return (celsiusTemp * 9 / 5) + 32
+    }
+
+
 
 }

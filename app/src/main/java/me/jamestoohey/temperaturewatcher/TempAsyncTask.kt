@@ -19,19 +19,10 @@ class TempAsyncTask: AsyncTask<URL, Void, TempReading?>() {
             val json = JSONObject(jsonString)
             val temp = json.getJSONObject("main").getInt("temp")
             val location = json.getString("name")
-            return TempReading(kelvinToCelsius(temp), location)
+            return TempReading(temp, location)
 
         } finally {
             connection.disconnect()
         }
     }
-
-    private fun kelvinToCelsius(temp: Int): Int = (temp - 273.15).roundToInt()
-
-    private fun kelvinToFahrenheit(temp: Int): Int {
-        val celsiusTemp = kelvinToCelsius(temp)
-        return (celsiusTemp * 9 / 5) + 32
-    }
-
-
 }
