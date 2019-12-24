@@ -44,8 +44,6 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
         tempMeasurementSpinner = findViewById(R.id.spinner)
         notificationsSwitch = findViewById(R.id.notificationsSwitch)
 
-
-
         serviceIntent = createServiceIntent()
 
         saveButton.setOnClickListener {
@@ -66,10 +64,9 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
 
         }
         setupTemperatureSpinner()
-
-        createNotificationChannel()
         notificationsSwitch.setOnCheckedChangeListener { _, isOn -> notificationsOn = isOn }
 
+        createNotificationChannel()
         loadDataIfExists()
     }
 
